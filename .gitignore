@@ -23,3 +23,20 @@ pnpm-debug.log*
 # System files
 .DS_Store
 Thumbs.db
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Testing and Coverage
+coverage/
+
+# Temporary and Scratch folders
+scratch/
+tmp/
+temp/
