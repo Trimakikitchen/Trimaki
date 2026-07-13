@@ -35,15 +35,17 @@ export const Login: React.FC = () => {
 
     if ((window as any).google?.accounts?.id) {
       initGoogle();
-    } else {
-      const interval = setInterval(() => {
-        if ((window as any).google?.accounts?.id) {
-          initGoogle();
-          clearInterval(interval);
-        }
-      }, 500);
-      return () => clearInterval(interval);
+      return;
     }
+
+    const interval = setInterval(() => {
+      if ((window as any).google?.accounts?.id) {
+        initGoogle();
+        clearInterval(interval);
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleGoogleResponse = async (response: any) => {

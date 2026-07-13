@@ -106,6 +106,9 @@ export interface Order {
   estimatedDelivery?: Date;
   notes?: string;
   otp?: string;
+  cancellationReason?: string;
+  items?: any[];
+  customerName?: string;
   createdAt: Date;
 }
 
