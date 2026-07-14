@@ -2,10 +2,10 @@
   "name": "trimaki-server",
   "version": "1.0.0",
   "description": "TRIMAKI Express Backend",
-  "main": "dist/server.js",
+  "main": "dist/server/src/server.js",
   "scripts": {
     "build": "rimraf dist && tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/server/src/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "typecheck": "tsc --noEmit"
   },
