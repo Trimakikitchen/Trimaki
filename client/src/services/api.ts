@@ -1,4 +1,4 @@
-const BASE_URL = ''; // Proxied by Vite to http://localhost:5000 in development
+const BASE_URL = import.meta.env.VITE_API_URL || '';
 
 export class ApiRequestError extends Error {
   public status: number;
@@ -16,7 +16,7 @@ export const api = {
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> => {
-    const url = endpoint.startsWith('http') ? endpoint : `/api${endpoint}`;
+    const url = endpoint.startsWith('http') ? endpoint : `${BASE_URL}/api${endpoint}`;
 
     // Get auth token from local storage
     const token = localStorage.getItem('trimaki_token');

@@ -105,8 +105,12 @@ app.use((req, _res, next) => {
 // Centralized Error Handling Middleware
 app.use(errorHandler);
 
-// Start server
-const PORT = env.PORT;
-app.listen(PORT, () => {
-  console.log(`🚀 TRIMAKI Backend Server running in ${env.NODE_ENV} mode on port ${PORT}`);
-});
+// Start server (only if not running on Vercel)
+if (!process.env.VERCEL) {
+  const PORT = env.PORT;
+  app.listen(PORT, () => {
+    console.log(`🚀 TRIMAKI Backend Server running in ${env.NODE_ENV} mode on port ${PORT}`);
+  });
+}
+
+export default app;

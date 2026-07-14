@@ -33,19 +33,22 @@ export const Login: React.FC = () => {
       }
     };
 
+    let interval: NodeJS.Timeout | null = null;
+
     if ((window as any).google?.accounts?.id) {
       initGoogle();
-      return;
+    } else {
+      interval = setInterval(() => {
+        if ((window as any).google?.accounts?.id) {
+          initGoogle();
+          if (interval) clearInterval(interval);
+        }
+      }, 500);
     }
 
-    const interval = setInterval(() => {
-      if ((window as any).google?.accounts?.id) {
-        initGoogle();
-        clearInterval(interval);
-      }
-    }, 500);
-
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, []);
 
   const handleGoogleResponse = async (response: any) => {
