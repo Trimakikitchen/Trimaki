@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import { env } from './config/env';
 import apiRouter from './routes';
 import { errorHandler, ApiError } from './middleware/error';
+import { db } from './config/db';
 
 const app = express();
 
@@ -92,6 +93,27 @@ app.get('/health', (_req, res) => {
     uptime: process.uptime(),
     env: env.NODE_ENV,
   });
+});
+
+// Diagnostic DB Route
+app.get('/api/debug-db', async (req, res) => {
+  try {
+    const result = await db.query('SELECT NOW()');
+    res.json({
+      status: 'success',
+      data: result.rows,
+      env: env.NODE_ENV,
+      dbUrlDefined: !!env.DATABASE_URL
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      status: 'error',
+      message: err.message,
+      stack: err.stack,
+      env: env.NODE_ENV,
+      dbUrlDefined: !!env.DATABASE_URL
+    });
+  }
 });
 
 // API Routes

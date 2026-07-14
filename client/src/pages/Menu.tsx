@@ -15,7 +15,7 @@ export const Menu: React.FC = () => {
   }, []);
 
   const { data: categories, isLoading: catsLoading } = useCategoriesQuery();
-  const { data: products, isLoading: prodsLoading } = useProductsQuery({
+  const { data: products, isLoading: prodsLoading, isError, error } = useProductsQuery({
     search: search.trim() || undefined,
     category: selectedCategory !== 'all' ? selectedCategory : undefined,
     veg: vegFilter,
@@ -130,6 +130,12 @@ export const Menu: React.FC = () => {
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="h-80 bg-white border border-muted rounded-premium animate-pulse" />
               ))}
+            </div>
+          ) : isError ? (
+            <div className="bg-red-50 text-center py-20 rounded-premium border border-red-200 shadow-card space-y-4">
+              <span className="text-5xl block">⚠️</span>
+              <h3 className="text-xl font-bold text-red-800 font-sans">Failed to load products</h3>
+              <p className="text-red-600 text-xs">{(error as any)?.message || 'Something went wrong while fetching products.'}</p>
             </div>
           ) : !products || products.length === 0 ? (
             <div className="bg-white text-center py-20 rounded-premium border border-muted shadow-card space-y-4">
