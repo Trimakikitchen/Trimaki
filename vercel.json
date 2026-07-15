@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm install --workspace=client && npm install --workspace=server",
+  "installCommand": "npm install",
   "buildCommand": "cd client && npm run build",
   "outputDirectory": "client/dist",
   "framework": null,
