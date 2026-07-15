@@ -1,16 +1,9 @@
-import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Send } from 'lucide-react';
+import React from 'react';
+import { useForm, ValidationError } from '@formspree/react';
+import { Mail, Phone, MapPin, Send, Loader2 } from 'lucide-react';
 
 export const Contact: React.FC = () => {
-  const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
-  const [sent, setSent] = useState(false);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Feedback submitted', formData);
-    setSent(true);
-    setFormData({ name: '', email: '', subject: '', message: '' });
-  };
+  const [state, handleSubmit] = useForm('xeeyoqzg');
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
@@ -23,60 +16,77 @@ export const Contact: React.FC = () => {
         {/* Left Side: Contact Form */}
         <div className="bg-white border border-muted p-8 rounded-premium shadow-card space-y-6">
           <h3 className="font-extrabold text-charcoal text-lg font-sans">Send Us a Message</h3>
-          {sent ? (
+          {state.succeeded ? (
             <div className="bg-success/10 border border-success/20 text-success p-4 rounded-xl text-sm font-semibold">
               Thank you! Your inquiry has been forwarded to our support concierge.
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Form-level errors from Formspree */}
+              {state.errors && state.errors.getFormErrors().length > 0 && (
+                <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl text-sm font-semibold">
+                  {state.errors.getFormErrors().map((error, i) => (
+                    <p key={i}>{error.message}</p>
+                  ))}
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase text-charcoal/60">Full Name</label>
+                  <label htmlFor="name" className="text-xs font-bold uppercase text-charcoal/60">Full Name</label>
                   <input
+                    id="name"
                     type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    name="name"
                     required
                     className="w-full px-4 py-2.5 border border-muted-dark rounded-lg text-sm focus:outline-none focus:border-primary"
                   />
+                  <ValidationError prefix="Name" field="name" errors={state.errors} className="text-xs text-red-500" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold uppercase text-charcoal/60">Email Address</label>
+                  <label htmlFor="email" className="text-xs font-bold uppercase text-charcoal/60">Email Address</label>
                   <input
+                    id="email"
                     type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    name="email"
                     required
                     className="w-full px-4 py-2.5 border border-muted-dark rounded-lg text-sm focus:outline-none focus:border-primary"
                   />
+                  <ValidationError prefix="Email" field="email" errors={state.errors} className="text-xs text-red-500" />
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold uppercase text-charcoal/60">Subject</label>
+                <label htmlFor="subject" className="text-xs font-bold uppercase text-charcoal/60">Subject</label>
                 <input
+                  id="subject"
                   type="text"
-                  value={formData.subject}
-                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  name="_subject"
                   required
                   className="w-full px-4 py-2.5 border border-muted-dark rounded-lg text-sm focus:outline-none focus:border-primary"
                 />
+                <ValidationError prefix="Subject" field="_subject" errors={state.errors} className="text-xs text-red-500" />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-bold uppercase text-charcoal/60">Message</label>
+                <label htmlFor="message" className="text-xs font-bold uppercase text-charcoal/60">Message</label>
                 <textarea
+                  id="message"
+                  name="message"
                   rows={4}
-                  value={formData.message}
-                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   required
                   className="w-full px-4 py-2.5 border border-muted-dark rounded-lg text-sm focus:outline-none focus:border-primary"
                 />
+                <ValidationError prefix="Message" field="message" errors={state.errors} className="text-xs text-red-500" />
               </div>
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-hover text-white font-bold rounded-full text-xs shadow-glow transition-colors"
+                disabled={state.submitting}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary-hover text-white font-bold rounded-full text-xs shadow-glow transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Send className="w-4 h-4" />
-                <span>Send Message</span>
+                {state.submitting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                <span>{state.submitting ? 'Sending...' : 'Send Message'}</span>
               </button>
             </form>
           )}
