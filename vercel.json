@@ -1,20 +1,15 @@
 {
-  "builds": [
-    {
-      "src": "server/src/server.ts",
-      "use": "@vercel/node"
-    }
-  ],
+  "buildCommand": "cd client && npm install && npm run build",
+  "outputDirectory": "client/dist",
+  "framework": null,
   "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    },
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/((?!.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|woff2?|ttf|eot)$).*)",
-      "dest": "/"
     }
   ]
 }
