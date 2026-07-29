@@ -11,6 +11,10 @@ import { db } from './config/db';
 
 const app = express();
 
+// Trust Render's reverse proxy so rate-limiter uses real client IPs
+// Render IP ranges: 74.220.48.0/24 and 74.220.56.0/24
+app.set('trust proxy', 1);
+
 // Helper to convert snake_case to camelCase
 const toCamel = (str: string) => {
   return str.replace(/([-_][a-z])/ig, ($1) => {
@@ -117,15 +121,19 @@ app.get('/api/debug-db', async (req, res) => {
       status: 'success',
       data: result.rows,
       env: env.NODE_ENV,
-      dbUrlDefined: !!env.DATABASE_URL
+      dbUrlDefined: !!env.DATABASE_URL,
+      dbUrlPrefix: env.DATABASE_URL?.substring(0, 40) + '...',
     });
   } catch (err: any) {
     res.status(500).json({
       status: 'error',
       message: err.message,
-      stack: err.stack,
+      code: err.code,
+      detail: err.detail,
+      hint: err.hint,
       env: env.NODE_ENV,
-      dbUrlDefined: !!env.DATABASE_URL
+      dbUrlDefined: !!env.DATABASE_URL,
+      dbUrlPrefix: env.DATABASE_URL?.substring(0, 40) + '...',
     });
   }
 });
