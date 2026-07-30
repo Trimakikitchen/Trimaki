@@ -8,6 +8,8 @@ import { env } from './config/env';
 import apiRouter from './routes';
 import { errorHandler, ApiError } from './middleware/error';
 import { db } from './config/db';
+import https from 'https';
+import http from 'http';
 
 const app = express();
 
@@ -99,6 +101,26 @@ app.use('/api/', limiter);
 // 5. Compression
 app.use(compression());
 
+// 6. Cache-Control headers for public read-only endpoints
+app.use('/api/products', (req, res, next) => {
+  if (req.method === 'GET') {
+    res.set('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
+  }
+  next();
+});
+app.use('/api/categories', (req, res, next) => {
+  if (req.method === 'GET') {
+    res.set('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+  }
+  next();
+});
+app.use('/api/offers', (req, res, next) => {
+  if (req.method === 'GET') {
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+  }
+  next();
+});
+
 // 6. Body Parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -154,6 +176,19 @@ if (!process.env.VERCEL) {
   const PORT = env.PORT;
   app.listen(PORT, () => {
     console.log(`🚀 TRIMAKI Backend Server running in ${env.NODE_ENV} mode on port ${PORT}`);
+
+    // Keepalive ping: prevents Render free tier from cold-starting by self-pinging every 14 minutes
+    if (env.NODE_ENV === 'production') {
+      const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+      setInterval(() => {
+        const client = SELF_URL.startsWith('https') ? https : http;
+        client.get(`${SELF_URL}/health`, (res) => {
+          console.log(`[Keepalive] Pinged /health → ${res.statusCode}`);
+        }).on('error', (err) => {
+          console.error('[Keepalive] Ping failed:', err.message);
+        });
+      }, 14 * 60 * 1000); // every 14 minutes
+    }
   });
 }
 

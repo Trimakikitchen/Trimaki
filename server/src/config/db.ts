@@ -4,6 +4,9 @@ import { env } from './env';
 const pool = new Pool({
   connectionString: env.DATABASE_URL,
   ssl: env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  max: 5,                        // max connections (Render free = limited RAM)
+  idleTimeoutMillis: 30000,      // close idle connections after 30s
+  connectionTimeoutMillis: 5000, // fail fast if can't connect in 5s
 });
 
 pool.on('error', (err) => {
