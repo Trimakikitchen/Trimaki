@@ -51,6 +51,14 @@ const seed = async () => {
       [kitchenPass]
     );
 
+    const deliveryPass = await bcrypt.hash('delivery123', 10);
+    await db.query(
+      `INSERT INTO users (full_name, email, phone, password_hash, role)
+       VALUES ('Rajesh Kumar', 'delivery@trimaki.com', '+91 99999 44444', $1, 'delivery')
+       RETURNING id`,
+      [deliveryPass]
+    );
+
     // 3. Insert Categories
     console.log('📁 Seeding categories...');
     const rollsCat = await db.query(
