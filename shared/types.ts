@@ -85,6 +85,8 @@ export type OrderStatus =
   | 'preparing'
   | 'packed'
   | 'out_for_delivery'
+  | 'in_transit'
+  | 'near_doorstep'
   | 'delivered'
   | 'cancelled';
 
@@ -109,6 +111,15 @@ export interface Order {
   cancellationReason?: string;
   items?: any[];
   customerName?: string;
+  deliveryPartnerId?: string;
+  deliveryPartnerName?: string;
+  deliveryLat?: number;
+  deliveryLng?: number;
+  // Delivery address (joined from addresses table)
+  addressLine?: string;
+  apartment?: string;
+  city?: string;
+  pincode?: string;
   createdAt: Date;
 }
 

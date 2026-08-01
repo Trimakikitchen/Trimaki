@@ -1,8 +1,7 @@
 import { Router } from 'express';
 import { validate } from '../middleware/validation';
-import { authenticate, isAdmin, isKitchen } from '../middleware/auth';
+import { authenticate, isAdmin, isKitchen, isDelivery } from '../middleware/auth';
 
-// Controllers and schemas
 import { authController, authSchemas } from '../controllers/auth';
 import { productsController, productSchemas } from '../controllers/products';
 import { inventoryController, inventorySchemas } from '../controllers/inventory';
@@ -10,6 +9,7 @@ import { ordersController, orderSchemas } from '../controllers/orders';
 import { customersController, customerSchemas } from '../controllers/customers';
 import { analyticsController } from '../controllers/analytics';
 import { chatController, chatSchemas } from '../controllers/chat';
+import { deliveryController, deliverySchemas } from '../controllers/delivery';
 
 const router = Router();
 
@@ -97,5 +97,33 @@ router.get('/analytics/dashboard', authenticate, isAdmin, analyticsController.ge
 router.get('/chat/conversations', authenticate, isAdmin, chatController.getConversations);
 router.get('/chat/messages', authenticate, chatController.getConversation);
 router.post('/chat/messages', authenticate, validate({ body: chatSchemas.sendMessage }), chatController.sendMessage);
+
+// ==========================================
+// 8. DELIVERY PARTNER
+// ==========================================
+// Delivery partner: view active assigned orders only (no history)
+router.get('/delivery/orders', authenticate, isDelivery, deliveryController.getMyActiveOrders);
+// Delivery partner: update delivery status (in_transit | near_doorstep | delivered)
+router.post('/delivery/orders/:id/status', authenticate, isDelivery, validate({ body: deliverySchemas.updateStatus }), deliveryController.updateDeliveryStatus);
+// Delivery partner: push GPS location for active order
+router.post('/delivery/orders/:id/location', authenticate, isDelivery, validate({ body: deliverySchemas.updateLocation }), deliveryController.updateLocation);
+// Customer / admin: get delivery partner GPS location for an order
+router.get('/delivery/orders/:id/location', authenticate, deliveryController.getOrderLocation);
+// Admin: assign a delivery partner to an order
+router.post('/delivery/orders/:id/assign', authenticate, isAdmin, deliveryController.assignPartner);
+// Admin: list all delivery partner users
+router.get('/delivery/partners', authenticate, isAdmin, deliveryController.getDeliveryPartners);
+// Admin: list users filtered by role (used by rider picker in AdminDelivery)
+router.get('/users', authenticate, isAdmin, async (req: any, res: any, next: any) => {
+  try {
+    const { role } = req.query;
+    const { db } = await import('../config/db');
+    const result = await db.query(
+      role ? 'SELECT id, full_name, email, phone, role FROM users WHERE role = $1 ORDER BY full_name' : 'SELECT id, full_name, email, phone, role FROM users ORDER BY full_name',
+      role ? [role] : []
+    );
+    res.json({ status: 'success', data: result.rows });
+  } catch (e) { next(e); }
+});
 
 export default router;

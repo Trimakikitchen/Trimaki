@@ -3,7 +3,57 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle2, Clock, ShieldAlert, Navigation, Star } from 'lucide-react';
 import { OrderStatus } from '@shared/types';
 import { useOrderByIdQuery, useOrdersQuery } from '../hooks/useOrders';
+import { useOrderLocationQuery } from '../hooks/useDelivery';
 import api from '../services/api';
+
+const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+
+// Live delivery tracking map — polls partner GPS every 10s
+const LiveDeliveryMap: React.FC<{ orderId: string }> = ({ orderId }) => {
+  const { data: loc } = useOrderLocationQuery(orderId, true);
+
+  if (!loc || (!loc.deliveryLat && !loc.destLat)) return null;
+
+  const partnerName = loc.partnerName || 'Your delivery partner';
+
+  if (MAPS_API_KEY && loc.deliveryLat && loc.deliveryLng && loc.destLat && loc.destLng) {
+    const src = `https://www.google.com/maps/embed/v1/directions?key=${MAPS_API_KEY}&origin=${loc.deliveryLat},${loc.deliveryLng}&destination=${loc.destLat},${loc.destLng}&mode=driving`;
+    return (
+      <div className="bg-white border border-muted rounded-premium shadow-card overflow-hidden">
+        <div className="px-6 py-4 border-b border-muted flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Navigation className="w-4 h-4 text-primary animate-pulse" />
+            <span className="font-bold text-charcoal text-sm">{partnerName} is on the way</span>
+          </div>
+          <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-bold">● LIVE</span>
+        </div>
+        <iframe title="delivery-map" src={src} className="w-full h-64" allowFullScreen loading="lazy" />
+      </div>
+    );
+  }
+
+  // Fallback: show Google Maps link to destination when no API key
+  if (loc.destLat && loc.destLng) {
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${loc.destLat},${loc.destLng}`;
+    return (
+      <div className="bg-white border border-muted rounded-premium shadow-card p-6 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Navigation className="w-5 h-5 text-primary animate-pulse" />
+          <div>
+            <p className="font-bold text-charcoal text-sm">{partnerName} is on the way</p>
+            <p className="text-xs text-muted-medium">GPS location updating live</p>
+          </div>
+        </div>
+        <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+          className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-full hover:bg-primary-hover transition-colors">
+          View Map
+        </a>
+      </div>
+    );
+  }
+
+  return null;
+};
 
 export const TrackOrder: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -130,7 +180,9 @@ export const TrackOrder: React.FC = () => {
       case 'accepted': return 1;
       case 'preparing':
       case 'packed': return 2;
-      case 'out_for_delivery': return 3;
+      case 'out_for_delivery':
+      case 'in_transit':
+      case 'near_doorstep': return 3;
       case 'delivered': return 4;
       default: return 0;
     }
@@ -178,6 +230,16 @@ export const TrackOrder: React.FC = () => {
                       Cancelled
                     </span>
                   )}
+                  {orderData.orderStatus === 'in_transit' && (
+                    <span className="px-2.5 py-0.5 bg-orange-100 text-orange-700 border border-orange-200 rounded font-black uppercase text-[10px] tracking-wider animate-pulse">
+                      🛵 In Transit
+                    </span>
+                  )}
+                  {orderData.orderStatus === 'near_doorstep' && (
+                    <span className="px-2.5 py-0.5 bg-purple-100 text-purple-700 border border-purple-200 rounded font-black uppercase text-[10px] tracking-wider animate-pulse">
+                      📍 Almost Here!
+                    </span>
+                  )}
                 </div>
               </div>
               {orderData.orderStatus !== 'cancelled' && (
@@ -192,6 +254,11 @@ export const TrackOrder: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Live Delivery Map — shows when order is out for delivery */}
+            {['out_for_delivery', 'in_transit', 'near_doorstep'].includes(orderData.orderStatus) && (
+              <LiveDeliveryMap orderId={orderData.id} />
+            )}
 
             {/* Layout Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">

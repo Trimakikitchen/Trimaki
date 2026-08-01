@@ -60,6 +60,8 @@ export const Login: React.FC = () => {
         navigate('/admin');
       } else if (loggedInUser.role === 'kitchen') {
         navigate('/kds');
+      } else if (loggedInUser.role === 'delivery') {
+        navigate('/delivery');
       } else {
         navigate('/');
       }
@@ -85,6 +87,8 @@ export const Login: React.FC = () => {
         navigate('/admin');
       } else if (loggedInUser.role === 'kitchen') {
         navigate('/kds');
+      } else if (loggedInUser.role === 'delivery') {
+        navigate('/delivery');
       } else {
         navigate('/');
       }

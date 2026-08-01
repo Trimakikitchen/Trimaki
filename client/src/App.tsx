@@ -39,6 +39,9 @@ import AdminChat from './pages/AdminChat';
 // Kitchen KDS Screen Page
 import KitchenDisplay from './pages/KitchenDisplay';
 
+// Delivery Partner Dashboard
+import DeliveryDashboard from './pages/DeliveryDashboard';
+
 // Initialize React Query client
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,6 +76,9 @@ export const App: React.FC = () => {
 
               {/* Kitchen Tablet Display */}
               <Route path="/kds" element={<KitchenDisplay />} />
+
+              {/* Delivery Partner Dashboard */}
+              <Route path="/delivery" element={<DeliveryDashboard />} />
 
               {/* Admin Panel Routes with Admin Sidebar Layout wrapper */}
               <Route path="/admin" element={<AdminLayout />}>
