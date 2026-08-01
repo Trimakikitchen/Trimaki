@@ -3,21 +3,23 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { CheckCircle2, Clock, ShieldAlert, Navigation, Star } from 'lucide-react';
 import { OrderStatus } from '@shared/types';
 import { useOrderByIdQuery, useOrdersQuery } from '../hooks/useOrders';
-import { useOrderLocationQuery } from '../hooks/useDelivery';
+import { useDeliverySocket } from '../hooks/useDelivery';
 import api from '../services/api';
 
 const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
-// Live delivery tracking map — polls partner GPS every 10s
-const LiveDeliveryMap: React.FC<{ orderId: string }> = ({ orderId }) => {
-  const { data: loc } = useOrderLocationQuery(orderId, true);
+// Live delivery tracking map — updates instantly via WebSocket
+const LiveDeliveryMap: React.FC<{ orderId: string; destLat?: number; destLng?: number }> = ({ orderId, destLat, destLng }) => {
+  const { location } = useDeliverySocket(orderId);
 
-  if (!loc || (!loc.deliveryLat && !loc.destLat)) return null;
+  const partnerName = location.partnerName || 'Your delivery partner';
+  const hasPartnerLoc = location.lat !== null && location.lng !== null;
+  const hasDest = destLat != null && destLng != null;
 
-  const partnerName = loc.partnerName || 'Your delivery partner';
+  if (!hasPartnerLoc && !hasDest) return null;
 
-  if (MAPS_API_KEY && loc.deliveryLat && loc.deliveryLng && loc.destLat && loc.destLng) {
-    const src = `https://www.google.com/maps/embed/v1/directions?key=${MAPS_API_KEY}&origin=${loc.deliveryLat},${loc.deliveryLng}&destination=${loc.destLat},${loc.destLng}&mode=driving`;
+  if (MAPS_API_KEY && hasPartnerLoc && hasDest) {
+    const src = `https://www.google.com/maps/embed/v1/directions?key=${MAPS_API_KEY}&origin=${location.lat},${location.lng}&destination=${destLat},${destLng}&mode=driving`;
     return (
       <div className="bg-white border border-muted rounded-premium shadow-card overflow-hidden">
         <div className="px-6 py-4 border-b border-muted flex items-center justify-between">
@@ -25,23 +27,25 @@ const LiveDeliveryMap: React.FC<{ orderId: string }> = ({ orderId }) => {
             <Navigation className="w-4 h-4 text-primary animate-pulse" />
             <span className="font-bold text-charcoal text-sm">{partnerName} is on the way</span>
           </div>
-          <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-bold">● LIVE</span>
+          <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded-full font-bold border border-green-200">● LIVE</span>
         </div>
         <iframe title="delivery-map" src={src} className="w-full h-64" allowFullScreen loading="lazy" />
       </div>
     );
   }
 
-  // Fallback: show Google Maps link to destination when no API key
-  if (loc.destLat && loc.destLng) {
-    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${loc.destLat},${loc.destLng}`;
+  // Fallback: show Google Maps link when no API key or no partner loc yet
+  if (hasDest) {
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`;
     return (
       <div className="bg-white border border-muted rounded-premium shadow-card p-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Navigation className="w-5 h-5 text-primary animate-pulse" />
           <div>
             <p className="font-bold text-charcoal text-sm">{partnerName} is on the way</p>
-            <p className="text-xs text-muted-medium">GPS location updating live</p>
+            <p className="text-xs text-muted-medium">
+              {hasPartnerLoc ? 'GPS signal received — tracking live' : 'Waiting for GPS signal...'}
+            </p>
           </div>
         </div>
         <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
@@ -257,7 +261,11 @@ export const TrackOrder: React.FC = () => {
 
             {/* Live Delivery Map — shows when order is out for delivery */}
             {['out_for_delivery', 'in_transit', 'near_doorstep'].includes(orderData.orderStatus) && (
-              <LiveDeliveryMap orderId={orderData.id} />
+              <LiveDeliveryMap
+                orderId={orderData.id}
+                destLat={(orderData as any).destLat}
+                destLng={(orderData as any).destLng}
+              />
             )}
 
             {/* Layout Grid */}

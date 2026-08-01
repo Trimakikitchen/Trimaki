@@ -1,6 +1,72 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useQueryClient as useQC } from '@tanstack/react-query';
+import { useEffect, useState, useCallback } from 'react';
 import api from '../services/api';
+import { getSocket } from '../services/socket';
 import { User, Order } from '@shared/types';
+
+// ── Real-time: subscribe to delivery location + status updates via WebSocket ─
+export const useDeliverySocket = (orderId: string | null) => {
+  const [location, setLocation] = useState<{
+    lat: number | null;
+    lng: number | null;
+    partnerName: string | null;
+  }>({ lat: null, lng: null, partnerName: null });
+  const [status, setStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!orderId) return;
+
+    const socket = getSocket();
+
+    // Subscribe to this order's room
+    socket.emit('join:order', orderId);
+
+    const onLocation = (data: { orderId: string; lat: number; lng: number; partnerName: string }) => {
+      if (data.orderId === orderId) {
+        setLocation({ lat: data.lat, lng: data.lng, partnerName: data.partnerName });
+      }
+    };
+
+    const onStatus = (data: { orderId: string; status: string }) => {
+      if (data.orderId === orderId) {
+        setStatus(data.status);
+      }
+    };
+
+    socket.on('location:changed', onLocation);
+    socket.on('status:changed', onStatus);
+
+    return () => {
+      socket.off('location:changed', onLocation);
+      socket.off('status:changed', onStatus);
+    };
+  }, [orderId]);
+
+  return { location, status };
+};
+
+// ── Delivery partner: emit GPS location via WebSocket (no HTTP round-trip) ──
+export const useEmitLocation = () => {
+  return useCallback((orderId: string, lat: number, lng: number) => {
+    const socket = getSocket();
+    socket.emit('location:update', { orderId, lat, lng });
+  }, []);
+};
+
+// ── Delivery partner: emit status via WebSocket + invalidate queries ─────────
+export const useEmitStatus = () => {
+  const queryClient = useQC();
+  return useCallback((orderId: string, status: string) => {
+    const socket = getSocket();
+    socket.emit('status:update', { orderId, status });
+    // Optimistically invalidate so the delivery dashboard re-fetches
+    setTimeout(() => {
+      queryClient.invalidateQueries({ queryKey: ['delivery-orders'] });
+    }, 500);
+  }, [queryClient]);
+};
+
+
 
 // ── Admin: list delivery partner users ──────────────────────────────────────
 export const useRidersQuery = () => {

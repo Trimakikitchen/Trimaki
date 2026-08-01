@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '@shared/types';
 import api from '../services/api';
+import { disconnectSocket } from '../services/socket';
 
 interface AuthContextType {
   user: User | null;
@@ -108,6 +109,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('trimaki_token');
     localStorage.removeItem('trimaki_refresh_token');
     localStorage.removeItem('trimaki_user');
+    disconnectSocket();
   };
 
   const updateProfile = async (data: Partial<User>) => {

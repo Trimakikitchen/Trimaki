@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useOrdersQuery, useVerifyOTPHandoverMutation } from '../hooks/useOrders';
-import { useRidersQuery, useAssignRiderMutation } from '../hooks/useDelivery';
+import { useRidersQuery, useAssignRiderMutation, useDeliverySocket } from '../hooks/useDelivery';
 import { Truck, ShieldAlert, MapPin, Navigation, ExternalLink } from 'lucide-react';
 
 const MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
@@ -263,35 +263,45 @@ export const AdminDelivery: React.FC = () => {
   );
 };
 
-// Mini map component used inline in AdminDelivery
-const OrderTrackMap: React.FC<{ orderId: string }> = ({ orderId }) => {
-  const [locData, setLocData] = React.useState<any>(null);
+// Mini map component using real-time WebSocket location
+const OrderTrackMap: React.FC<{ orderId: string; destLat?: number; destLng?: number }> = ({ orderId, destLat, destLng }) => {
+  const { location } = useDeliverySocket(orderId);
 
-  React.useEffect(() => {
-    import('../services/api').then(({ default: api }) => {
-      const poll = () => api.get(`/delivery/orders/${orderId}/location`).then(setLocData).catch(() => {});
-      poll();
-      const t = setInterval(poll, 10000);
-      return () => clearInterval(t);
-    });
-  }, [orderId]);
+  const hasLoc = location.lat !== null && location.lng !== null;
+  const hasDest = destLat != null && destLng != null;
 
-  if (!locData || (!locData.deliveryLat && !locData.destLat)) {
-    return <p className="text-xs text-muted-medium text-center py-3">Waiting for GPS signal from delivery partner...</p>;
+  if (!hasLoc && !hasDest) {
+    return (
+      <div className="flex items-center gap-2 py-3 text-xs text-muted-medium">
+        <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+        Waiting for GPS signal from delivery partner...
+      </div>
+    );
   }
 
-  if (MAPS_API_KEY && locData.deliveryLat && locData.destLat) {
-    const src = `https://www.google.com/maps/embed/v1/directions?key=${MAPS_API_KEY}&origin=${locData.deliveryLat},${locData.deliveryLng}&destination=${locData.destLat},${locData.destLng}&mode=driving`;
-    return <iframe title={`admin-map-${orderId}`} src={src} className="w-full h-52 rounded-xl border border-muted" loading="lazy" />;
+  if (MAPS_API_KEY && hasLoc && hasDest) {
+    const src = `https://www.google.com/maps/embed/v1/directions?key=${MAPS_API_KEY}&origin=${location.lat},${location.lng}&destination=${destLat},${destLng}&mode=driving`;
+    return (
+      <div className="space-y-1">
+        <div className="flex items-center gap-1.5 text-[10px] text-green-600 font-bold">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> LIVE WebSocket
+        </div>
+        <iframe title={`admin-map-${orderId}`} src={src} className="w-full h-52 rounded-xl border border-muted" loading="lazy" />
+      </div>
+    );
   }
 
-  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${locData.destLat},${locData.destLng}`;
-  return (
-    <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
-      className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-600 text-white text-xs font-bold rounded-lg">
-      <ExternalLink className="w-3.5 h-3.5" /> Open Delivery Route in Maps
-    </a>
-  );
+  if (hasDest) {
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${destLat},${destLng}`;
+    return (
+      <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 w-full py-2.5 bg-blue-600 text-white text-xs font-bold rounded-lg">
+        <ExternalLink className="w-3.5 h-3.5" /> Open Delivery Route in Maps
+      </a>
+    );
+  }
+
+  return null;
 };
 
 export default AdminDelivery;

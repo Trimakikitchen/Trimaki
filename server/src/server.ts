@@ -4,12 +4,12 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import http from 'http';
 import { env } from './config/env';
 import apiRouter from './routes';
 import { errorHandler, ApiError } from './middleware/error';
 import { db } from './config/db';
-import https from 'https';
-import http from 'http';
+import { initSocket } from './config/socket';
 
 const app = express();
 
@@ -174,20 +174,23 @@ app.use(errorHandler);
 // Start server (only if not running on Vercel)
 if (!process.env.VERCEL) {
   const PORT = env.PORT;
-  app.listen(PORT, () => {
-    console.log(`🚀 TRIMAKI Backend Server running in ${env.NODE_ENV} mode on port ${PORT}`);
+  const httpServer = http.createServer(app);
 
-    // Keepalive ping: prevents Render free tier from cold-starting by self-pinging every 14 minutes
+  // Attach Socket.io to the HTTP server (same port as Express)
+  initSocket(httpServer);
+
+  httpServer.listen(PORT, () => {
+    console.log(`🚀 TRIMAKI Backend Server running in ${env.NODE_ENV} mode on port ${PORT}`);
+    console.log(`🔌 WebSocket server ready on ws://localhost:${PORT}`);
+
+    // Keepalive ping: prevents Render free tier from cold-starting
     if (env.NODE_ENV === 'production') {
       const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
       setInterval(() => {
-        const client = SELF_URL.startsWith('https') ? https : http;
-        client.get(`${SELF_URL}/health`, (res) => {
-          console.log(`[Keepalive] Pinged /health → ${res.statusCode}`);
-        }).on('error', (err) => {
-          console.error('[Keepalive] Ping failed:', err.message);
-        });
-      }, 14 * 60 * 1000); // every 14 minutes
+        fetch(`${SELF_URL}/health`)
+          .then((r) => console.log(`[Keepalive] /health → ${r.status}`))
+          .catch((err) => console.error('[Keepalive] Ping failed:', err.message));
+      }, 14 * 60 * 1000);
     }
   });
 }
